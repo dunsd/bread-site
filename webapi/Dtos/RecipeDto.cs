@@ -1,0 +1,1 @@
+public record RecipeDto(int Id, string? Title, string? Description, string? Image);
