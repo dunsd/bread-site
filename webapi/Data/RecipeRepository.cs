@@ -10,6 +10,9 @@ namespace webapi.Data
     {
         Task<List<RecipeDto>> GetAll();        
         Task<RecipeDetailDto?> Get(int id);
+        Task Delete(int id);
+        Task<RecipeDetailDto> Add(RecipeDetailDto dto);
+        Task<RecipeDetailDto> Update(RecipeDetailDto dto);
     }
     public class RecipeRepository : IRecipeRepository
     {
@@ -27,14 +30,67 @@ namespace webapi.Data
 
         public async Task<RecipeDetailDto?> Get(int id) 
         {
-            var e = await context.Recipes.SingleOrDefaultAsync(rec => rec.Id == id);
+            var entity = await context.Recipes.SingleOrDefaultAsync(rec => rec.Id == id);
 
-            if(e == null)
+            if(entity == null)
             {
                 return null;
             }
-
-            return new RecipeDetailDto(e.Id, e.Title, e.Description, e.Image);
+            return EntityToDetailDto(entity);
         }
+        
+
+        public async Task<RecipeDetailDto?> Add(RecipeDetailDto dto)
+        {
+            var recipeEntity = new RecipeEntity 
+            {
+                Title = dto.Title,
+                Description = dto.Description,
+                Image = dto.Image
+            };        
+            DtoToEntity(dto, recipeEntity);
+
+            context.Recipes.Add(recipeEntity);
+            await context.SaveChangesAsync();
+            return EntityToDetailDto(recipeEntity);
+        }
+
+        public async Task<RecipeDetailDto> Update(RecipeDetailDto dto)
+        {
+            var entity = await context.Recipes.FindAsync(dto.Id);
+            if(entity == null)
+            {
+                throw new ArgumentException($"Error updating recipe {dto.Id}");
+            }
+            DtoToEntity(dto, entity);
+            context.Entry(entity).State = EntityState.Modified;
+            await context.SaveChangesAsync();
+            return EntityToDetailDto(entity);
+        }
+
+        public async Task Delete(int id)
+        {
+            var entity = await context.Recipes.FindAsync(id);
+            if(entity == null)
+            {
+                throw new ArgumentException($"Error deleting recipe {id}");
+            }
+            context.Recipes.Remove(entity);
+            await context.SaveChangesAsync();
+        }
+
+        #region Helpers
+        private static void DtoToEntity(RecipeDetailDto dto, RecipeEntity entity)
+        {
+            entity.Title = dto.Title;
+            entity.Description = dto.Description;
+            entity.Image = dto.Image;
+        }
+
+        private static RecipeDetailDto EntityToDetailDto(RecipeEntity entity)
+        {
+            return new RecipeDetailDto(entity.Id, entity.Title, entity.Description, entity.Image);
+        }
+        #endregion
     }
 }

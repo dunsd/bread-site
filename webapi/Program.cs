@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using webapi;
 using webapi.Data;
 
@@ -41,6 +42,32 @@ app.MapGet("/recipe/{recipeId:int}", async (int recipeId, IRecipeRepository repo
     return Results.Ok(recipe);
 }).ProducesProblem(404).Produces<RecipeDetailDto>(StatusCodes.Status200OK);
 
+app.MapPost("/recipes", async ([FromBody]RecipeDetailDto dto, IRecipeRepository repo) => 
+{
+    var newRecipe = repo.Add(dto);
+    return Results.Created($"/recipe/{newRecipe.Id}", newRecipe);
+}).Produces<RecipeDetailDto>(StatusCodes.Status201Created);
+
+app.MapPut("/recipes", async ([FromBody]RecipeDetailDto dto, IRecipeRepository repo) => 
+{
+    if (await repo.Get(dto.Id) == null) 
+    {
+        return Results.Problem("Recipe {recipe.Id} not found",
+        statusCode: 404);
+    }
+    var updatedRecipe = await repo.Update(dto);
+    return Results.Ok(updatedRecipe);
+}).ProducesProblem(404).Produces<RecipeDetailDto>(StatusCodes.Status200OK);
+
+app.MapDelete("/recipes/{recipeId:int}", async (int recipeId,IRecipeRepository repo) => 
+{ 
+    if (await repo.Get(recipeId) == null)
+    {
+        return Results.Problem($"Recipe {recipeId} not found", statusCode:404);
+    }
+    await repo.Delete(recipeId);
+    return Results.Ok();
+}).ProducesProblem(404).Produces(StatusCodes.Status200OK);
 
 app.UseAuthorization();
 
